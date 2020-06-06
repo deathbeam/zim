@@ -65,6 +65,8 @@ _zimfw_build_init() {
 }
 
 _zimfw_build_login_init() {
+  local -Ur zscriptdirs=(${ZIM_HOME} ${${_zscripts%%${ZIM_HOME}/*}:h})
+  local -r zscriptglob=("${^zscriptdirs[@]}/(^*test*/)#*.zsh(|-theme)(N-.)")
   local -r ztarget=${ZIM_HOME}/login_init.zsh
   _zimfw_mv =(
     print -Rn "() {
@@ -79,18 +81,16 @@ _zimfw_build_login_init() {
   fi
 
   # Compile Zsh startup files
-  for zfile in \${1} \${ZDOTDIR:-\${HOME}}/.z(shenv|profile|shrc|login|logout)(N-.); do
+  for zfile in \${ZDOTDIR:-\${HOME}}/.z(shenv|profile|shrc|login|logout)(N-.); do
     zrecompile -p \${1} \${zfile} || return 1
   done
 
   # Compile Zim scripts
-  for zfile in \${ZIM_HOME}/(^*test*/)#*.zsh(|-theme)(N-.); do
+  for zfile in ${zscriptglob}; do
     zrecompile -p \${1} \${zfile} || return 1
   done
 
-  if [[ \${1} != -q ]]; then
-    print -P 'Done with compile.'
-  fi
+  if [[ \${1} != -q ]] print -P 'Done with compile.'
 } \"\${@}\"
 "
   ) ${ztarget}
@@ -141,7 +141,7 @@ Initialization options:
   local ztype=branch zrev=master
   local -i zdisabled=0 zfrozen=0
   local -a zfpaths zfunctions zscripts
-  local zarg
+  local zarg zdir
   if [[ ${zurl} =~ ^[^:/]+: ]]; then
     zmodule=${zmodule%.git}
   elif [[ ${zurl} != /* ]]; then
@@ -162,7 +162,11 @@ Initialization options:
     zmodule=${1}
     shift
   fi
-  local -r zdir=${ZIM_HOME}/modules/${zmodule}
+  if [[ ${zurl} == /* ]]; then
+    zdir=${zurl}
+  else
+    zdir=${ZIM_HOME}/modules/${zmodule}
+  fi
   while (( # > 0 )); do
     case ${1} in
       -b|--branch|-t|--tag|-f|--fpath|-a|--autoload|-s|--source)
@@ -299,7 +303,7 @@ _zimfw_compile() {
 }
 
 _zimfw_info() {
-  print -R 'zimfw version: '${_zversion}' (previous commit is c0d7862)'
+  print -R 'zimfw version: '${_zversion}' (previous commit is 9890c9d)'
   print -R 'ZIM_HOME:      '${ZIM_HOME}
   print -R 'Zsh version:   '${ZSH_VERSION}
   print -R 'System info:   '$(command uname -a)
@@ -482,7 +486,7 @@ fi
     clean) _zimfw_clean_compiled && _zimfw_clean_dumpfile ;;
     clean-compiled) _zimfw_clean_compiled ;;
     clean-dumpfile) _zimfw_clean_dumpfile ;;
-    compile) _zimfw_build_login_init && _zimfw_compile ;;
+    compile) _zimfw_source_zimrc && _zimfw_build_login_init && _zimfw_compile ;;
     help) print -PR ${zusage} ;;
     info) _zimfw_info ;;
     install|update)

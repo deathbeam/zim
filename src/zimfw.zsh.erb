@@ -24,7 +24,7 @@ class Zim
   end
 
   def render_escaped(filename)
-    render(filename).gsub(/(?=\$[^']|"|`)/, "\\\\")
+    render(filename).gsub(/(?=\$[^']|"|`)/, "\\\\").gsub(/#\{/, "$\{")
   end
 
   def render_commented(filename)
